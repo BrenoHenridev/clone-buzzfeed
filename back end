@@ -1,0 +1,174 @@
+import zipfile
+
+# Estrutura de arquivos iniciais para um clone do BuzzFeed com Angular (simplificado)
+buzzfeed_clone_structure = {
+    "buzzfeed-clone/src/app/models/post.ts":
+    """
+export interface Post {
+  id?: number;
+  title: string;
+  content: string;
+  imageUrl: string;
+  category: string;
+  createdAt: string;
+}
+""",
+
+    "buzzfeed-clone/src/app/services/post.service.ts":
+    """
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Post } from '../models/post';
+
+@Injectable({ providedIn: 'root' })
+export class PostService {
+  private baseUrl = 'http://localhost:3000/posts'; // Mock API
+
+  constructor(private http: HttpClient) {}
+
+  getAll(): Observable<Post[]> {
+    return this.http.get<Post[]>(this.baseUrl);
+  }
+
+  create(post: Post): Observable<Post> {
+    return this.http.post<Post>(this.baseUrl, post);
+  }
+}
+""",
+
+    "buzzfeed-clone/src/app/app-routing.module.ts":
+    """
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { HomeComponent } from './components/home/home.component';
+import { NewPostComponent } from './components/new-post/new-post.component';
+
+const routes: Routes = [
+  { path: '', component: HomeComponent },
+  { path: 'new', component: NewPostComponent }
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }
+""",
+
+    "buzzfeed-clone/src/app/app.module.ts":
+    """
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppRoutingModule } from './app-routing.module';
+import { HttpClientModule } from '@angular/common/http';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { AppComponent } from './app.component';
+import { HomeComponent } from './components/home/home.component';
+import { NewPostComponent } from './components/new-post/new-post.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    HomeComponent,
+    NewPostComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    HttpClientModule,
+    FormsModule,
+    ReactiveFormsModule
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+""",
+
+    "buzzfeed-clone/src/app/components/home/home.component.ts":
+    """
+import { Component, OnInit } from '@angular/core';
+import { PostService } from '../../services/post.service';
+import { Post } from '../../models/post';
+
+@Component({
+  selector: 'app-home',
+  templateUrl: './home.component.html'
+})
+export class HomeComponent implements OnInit {
+  posts: Post[] = [];
+
+  constructor(private service: PostService) {}
+
+  ngOnInit(): void {
+    this.service.getAll().subscribe(data => this.posts = data);
+  }
+}
+""",
+
+    "buzzfeed-clone/src/app/components/home/home.component.html":
+    """
+<h2>Posts Recentes</h2>
+<div *ngFor="let post of posts" class="post">
+  <img [src]="post.imageUrl" width="100%" alt="Post image">
+  <h3>{{ post.title }}</h3>
+  <small>{{ post.category }} - {{ post.createdAt | date }}</small>
+  <p>{{ post.content }}</p>
+</div>
+""",
+
+    "buzzfeed-clone/src/app/components/new-post/new-post.component.ts":
+    """
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { PostService } from '../../services/post.service';
+
+@Component({
+  selector: 'app-new-post',
+  templateUrl: './new-post.component.html'
+})
+export class NewPostComponent {
+  form: FormGroup;
+
+  constructor(private fb: FormBuilder, private service: PostService) {
+    this.form = this.fb.group({
+      title: [''],
+      content: [''],
+      imageUrl: [''],
+      category: [''],
+      createdAt: [new Date().toISOString()]
+    });
+  }
+
+  submit() {
+    this.service.create(this.form.value).subscribe(() => {
+      alert('Post criado!');
+      this.form.reset();
+    });
+  }
+}
+""",
+
+    "buzzfeed-clone/src/app/components/new-post/new-post.component.html":
+    """
+<h2>Novo Post</h2>
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <input formControlName="title" placeholder="Título" /><br />
+  <input formControlName="imageUrl" placeholder="URL da imagem" /><br />
+  <input formControlName="category" placeholder="Categoria" /><br />
+  <textarea formControlName="content" placeholder="Conteúdo"></textarea><br />
+  <button type="submit">Publicar</button>
+</form>
+"""
+}
+
+# Caminho do zip
+zip_path = "/mnt/data/buzzfeed-clone.zip"
+
+# Criação do zip
+with zipfile.ZipFile(zip_path, 'w') as zipf:
+    for path, content in buzzfeed_clone_structure.items():
+        zipf.writestr(path, content)
+
+zip_path
