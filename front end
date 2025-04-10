@@ -1,0 +1,127 @@
+npm install firebase @angular/fire
+export const environment = {
+  production: false,
+  firebaseConfig: {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_PROJETO.firebaseapp.com",
+    projectId: "SEU_PROJETO",
+    storageBucket: "SEU_PROJETO.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
+  },
+  apiUrl: 'http://localhost:3000' // URL do backend Node
+};
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { provideAuth, getAuth } from '@angular/fire/auth';
+import { environment } from '../environments/environment';
+
+import { AppComponent } from './app.component';
+import { HomeComponent } from './components/home/home.component';
+import { NewPostComponent } from './components/new-post/new-post.component';
+import { LoginComponent } from './components/login/login.component';
+import { AppRoutingModule } from './app-routing.module';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    HomeComponent,
+    NewPostComponent,
+    LoginComponent
+  ],
+  imports: [
+    BrowserModule,
+    FormsModule,
+    ReactiveFormsModule,
+    HttpClientModule,
+    AppRoutingModule,
+    provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),
+    provideAuth(() => getAuth())
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule {}
+import { Injectable } from '@angular/core';
+import { Auth, signInWithPopup, GoogleAuthProvider, signOut, user, getIdToken } from '@angular/fire/auth';
+import { BehaviorSubject } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  currentUser$ = user(this.auth);
+  token$ = new BehaviorSubject<string | null>(null);
+
+  constructor(private auth: Auth) {
+    this.currentUser$.subscribe(async user => {
+      if (user) {
+        const token = await getIdToken(user);
+        this.token$.next(token);
+      } else {
+        this.token$.next(null);
+      }
+    });
+  }
+
+  login() {
+    return signInWithPopup(this.auth, new GoogleAuthProvider());
+  }
+
+  logout() {
+    return signOut(this.auth);
+  }
+}
+import { Injectable } from '@angular/core';
+import { HttpInterceptor, HttpRequest, HttpHandler } from '@angular/common/http';
+import { AuthService } from './auth.service';
+import { switchMap, take } from 'rxjs';
+
+@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  constructor(private authService: AuthService) {}
+
+  intercept(req: HttpRequest<any>, next: HttpHandler) {
+    return this.authService.token$.pipe(
+      take(1),
+      switchMap(token => {
+        if (token) {
+          const clone = req.clone({
+            setHeaders: { Authorization: `Bearer ${token}` }
+          });
+          return next.handle(clone);
+        }
+        return next.handle(req);
+      })
+    );
+  }
+}
+providers: [
+  { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
+],
+like(id: number) {
+  this.http.post(`${this.api}/posts/${id}/like`, {}).subscribe(post => this.loadPosts());
+}
+
+dislike(id: number) {
+  this.http.post(`${this.api}/posts/${id}/dislike`, {}).subscribe(post => this.loadPosts());
+}
+
+addComment(id: number, text: string) {
+  this.http.post(`${this.api}/posts/${id}/comments`, { text }).subscribe(() => this.loadPosts());
+}
+<div *ngFor="let post of posts">
+  <h3>{{ post.title }}</h3>
+  <p>{{ post.content }}</p>
+  <button (click)="like(post.id)">👍 {{ post.likes }}</button>
+  <button (click)="dislike(post.id)">👎 {{ post.dislikes }}</button>
+
+  <div>
+    <input #commentInput placeholder="Comentar..." />
+    <button (click)="addComment(post.id, commentInput.value)">Enviar</button>
+  </div>
+
+  <div *ngFor="let c of post.comments">
+    <small><b>{{ c.user }}</b>: {{ c.text }}</small>
+  </div>
+</div>
